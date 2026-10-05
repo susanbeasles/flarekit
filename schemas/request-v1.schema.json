@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlareKit request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestID",
+    "operation",
+    "parameters"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "requestID": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": [
+        "archive.git.capture",
+        "archive.git.restore",
+        "archive.git.verify",
+        "archive.snapshot.create",
+        "archive.snapshot.fetch",
+        "archive.snapshot.publish",
+        "archive.snapshot.restore",
+        "archive.snapshot.verify",
+        "archive.vault.initialize",
+        "configuration.validate",
+        "credential.enroll",
+        "storage.bucket.create",
+        "storage.bucket.inspect",
+        "storage.multipart.abort",
+        "storage.multipart.upload",
+        "storage.object.download",
+        "storage.object.inspect",
+        "storage.object.list",
+        "storage.object.upload",
+        "storage.object.verify",
+        "storage.retention.apply",
+        "storage.retention.inspect",
+        "worker.apply",
+        "worker.inspect",
+        "worker.plan",
+        "worker.promote",
+        "worker.secret.stage"
+      ]
+    },
+    "profile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "parameters": {
+      "type": "object"
+    }
+  }
+}

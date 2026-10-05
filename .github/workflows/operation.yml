@@ -1,0 +1,79 @@
+name: FlareKit protected operation
+on:
+  workflow_call:
+    inputs:
+      environment: {required: true, type: string}
+      request-path: {required: true, type: string}
+      config-path: {required: true, type: string}
+      capability: {required: true, type: string}
+    secrets:
+      FK_WORKER_TOKEN: {required: false}
+      FK_WEBHOOK_SECRET: {required: false}
+      FK_R2_ACCESS_KEY_ID: {required: false}
+      FK_R2_SECRET_ACCESS_KEY: {required: false}
+      FK_PRIMARY_IDENTITY: {required: false}
+permissions: {}
+jobs:
+  operation:
+    if: >-
+      github.repository == vars.FLAREKIT_ALLOWED_REPOSITORY &&
+      contains(fromJSON(vars.FLAREKIT_ALLOWED_ACTOR_IDS || '[]'), github.actor_id) &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref_type == 'branch' && github.ref_protected
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.19.0'
+      - name: Install reviewed prebuilt tool
+        env:
+          TOOL_URL: ${{ vars.FLAREKIT_TOOL_URL }}
+          TOOL_SHA256: ${{ vars.FLAREKIT_TOOL_SHA256 }}
+        run: |
+          set -euo pipefail
+          [[ "$TOOL_URL" == https://* ]]
+          [[ "$TOOL_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          curl --fail --location --silent --show-error "$TOOL_URL" -o "$RUNNER_TEMP/fk.tar.gz"
+          printf '%s  %s\n' "$TOOL_SHA256" "$RUNNER_TEMP/fk.tar.gz" | sha256sum --check --status
+          mkdir "$RUNNER_TEMP/fk-tool"
+          tar --no-same-owner -xzf "$RUNNER_TEMP/fk.tar.gz" -C "$RUNNER_TEMP/fk-tool" --strip-components=1
+          cd "$RUNNER_TEMP/fk-tool/adapter"
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate operation and execute
+        env:
+          REQUEST_PATH: ${{ inputs.request-path }}
+          CONFIG_PATH: ${{ inputs.config-path }}
+          CAPABILITY: ${{ inputs.capability }}
+          FK_WORKER_TOKEN: ${{ secrets.FK_WORKER_TOKEN }}
+          FK_WEBHOOK_SECRET: ${{ secrets.FK_WEBHOOK_SECRET }}
+          FK_R2_ACCESS_KEY_ID: ${{ secrets.FK_R2_ACCESS_KEY_ID }}
+          FK_R2_SECRET_ACCESS_KEY: ${{ secrets.FK_R2_SECRET_ACCESS_KEY }}
+          FK_PRIMARY_IDENTITY: ${{ secrets.FK_PRIMARY_IDENTITY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib
+          root=pathlib.Path.cwd().resolve()
+          for key in ['REQUEST_PATH','CONFIG_PATH']:
+              path=(root/os.environ[key]).resolve()
+              assert path.is_relative_to(root) and path.is_file(), 'Invalid input path'
+          request=json.loads(pathlib.Path(os.environ['REQUEST_PATH']).read_text())
+          operation=request['operation']
+          capability=os.environ['CAPABILITY']
+          assert capability in ['deployment','archive']
+          assert (capability=='deployment' and operation.startswith('worker.')) or (capability=='archive' and operation.startswith('archive.')), 'Capability mismatch'
+          PY
+          export FK_NODE="$(command -v node)"
+          export FK_WORKER_ADAPTER="$RUNNER_TEMP/fk-tool/adapter/worker.mjs"
+          export FK_AGE="$RUNNER_TEMP/fk-tool/age/age"
+          export FK_AGE_KEYGEN="$RUNNER_TEMP/fk-tool/age/age-keygen"
+          "$RUNNER_TEMP/fk-tool/bin/fk" run --request "$REQUEST_PATH" --config "$CONFIG_PATH" | tee "$RUNNER_TEMP/flarekit-result.json"
+          printf 'FlareKit %s result recorded; source SHA %s\n' "$CAPABILITY" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

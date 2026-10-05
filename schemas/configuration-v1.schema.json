@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlareKit configuration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "profiles",
+    "vaults"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "accountID",
+          "group",
+          "allowedOperations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "accountID": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "jurisdiction": {
+            "enum": [
+              "eu",
+              "us",
+              "fedramp",
+              null
+            ]
+          },
+          "bucket": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group": {
+            "type": "object",
+            "required": [
+              "project",
+              "environment",
+              "purpose",
+              "contentType"
+            ],
+            "properties": {
+              "project": {
+                "type": "string",
+                "minLength": 1
+              },
+              "environment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentType": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "allowedOperations": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "archive.git.capture",
+                "archive.git.restore",
+                "archive.git.verify",
+                "archive.snapshot.create",
+                "archive.snapshot.fetch",
+                "archive.snapshot.publish",
+                "archive.snapshot.restore",
+                "archive.snapshot.verify",
+                "archive.vault.initialize",
+                "configuration.validate",
+                "credential.enroll",
+                "storage.bucket.create",
+                "storage.bucket.inspect",
+                "storage.multipart.abort",
+                "storage.multipart.upload",
+                "storage.object.download",
+                "storage.object.inspect",
+                "storage.object.list",
+                "storage.object.upload",
+                "storage.object.verify",
+                "storage.retention.apply",
+                "storage.retention.inspect",
+                "worker.apply",
+                "worker.inspect",
+                "worker.plan",
+                "worker.promote",
+                "worker.secret.stage"
+              ]
+            }
+          },
+          "allowedWorkerBucketNames": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedWorkerSecretReferences": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "managementCredential": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "reference"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "enum": [
+                      "environment",
+                      "keychain",
+                      "hardware"
+                    ]
+                  },
+                  "reference": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]{1,128}$"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workerCredential": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "reference"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "enum": [
+                      "environment",
+                      "keychain",
+                      "hardware"
+                    ]
+                  },
+                  "reference": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]{1,128}$"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accessKeyID": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "reference"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "enum": [
+                      "environment",
+                      "keychain",
+                      "hardware"
+                    ]
+                  },
+                  "reference": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]{1,128}$"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "secretAccessKey": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "reference"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "enum": [
+                      "environment",
+                      "keychain",
+                      "hardware"
+                    ]
+                  },
+                  "reference": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]{1,128}$"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "vaults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "encryptionFormat",
+          "deduplicationScope",
+          "evictPrimaryAfterReplication",
+          "recoveryReferences",
+          "destinations",
+          "verification"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "encryptionFormat": {
+            "const": "fk-age-v1"
+          },
+          "deduplicationScope": {
+            "const": "vault"
+          },
+          "evictPrimaryAfterReplication": {
+            "const": false
+          },
+          "recoveryReferences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "provider",
+                "role",
+                "credentialReference",
+                "resource",
+                "independentRestoreRequired"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "provider": {
+                  "enum": [
+                    "r2",
+                    "b2",
+                    "google-drive"
+                  ]
+                },
+                "role": {
+                  "enum": [
+                    "primary",
+                    "replica"
+                  ]
+                },
+                "credentialReference": {
+                  "type": "string"
+                },
+                "resource": {
+                  "type": "string"
+                },
+                "independentRestoreRequired": {
+                  "const": true
+                }
+              }
+            }
+          },
+          "verification": {
+            "type": "object",
+            "required": [
+              "mode",
+              "maximumReadBytesPerRun",
+              "maximumRequestsPerRun",
+              "intervalSeconds",
+              "minimumSampleCount"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "full",
+                  "metadata",
+                  "sampled"
+                ]
+              },
+              "maximumReadBytesPerRun": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "maximumRequestsPerRun": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "intervalSeconds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "minimumSampleCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

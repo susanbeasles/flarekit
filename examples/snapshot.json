@@ -1,0 +1,8 @@
+{
+  "vault": "/absolute/path/vault",
+  "source": "/absolute/path/private-git-capture",
+  "identity": {
+    "provider": "environment",
+    "reference": "FK_PRIMARY_IDENTITY"
+  }
+}

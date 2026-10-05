@@ -1,0 +1,5 @@
+{
+  "key": "objects/example.bin",
+  "file": "/absolute/path/example.bin",
+  "verification": "metadata"
+}

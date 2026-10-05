@@ -1,0 +1,39 @@
+{
+  "sourceDirectory": "/absolute/path/prebuilt-worker",
+  "mode": "deploy",
+  "sourceSHA": "replace-with-actual-source-sha",
+  "configuration": {
+    "name": "caller-selected-worker",
+    "main": "index.mjs",
+    "compatibility_date": "2026-10-04",
+    "workers_dev": false,
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "COORDINATOR",
+          "class_name": "FixtureCoordinator"
+        }
+      ]
+    },
+    "migrations": [
+      {
+        "tag": "v1",
+        "new_sqlite_classes": [
+          "FixtureCoordinator"
+        ]
+      }
+    ],
+    "r2_buckets": [
+      {
+        "binding": "RECEIPTS",
+        "bucket_name": "replace-with-receipt-bucket"
+      }
+    ]
+  },
+  "secretReferences": {
+    "WEBHOOK_SECRET": {
+      "provider": "environment",
+      "reference": "FK_WEBHOOK_SECRET"
+    }
+  }
+}

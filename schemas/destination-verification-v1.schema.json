@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Per-destination verification v1",
+  "type": "object",
+  "required": [
+    "destinationID",
+    "mode",
+    "checkedAt",
+    "checkedBytes",
+    "checkedObjects",
+    "totalObjects",
+    "manifestDigest",
+    "independentRestore",
+    "status"
+  ],
+  "properties": {
+    "destinationID": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "metadata",
+        "full",
+        "sampled"
+      ]
+    },
+    "checkedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checkedBytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkedObjects": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "totalObjects": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "selectionSeed": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "manifestDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "independentRestore": {
+      "enum": [
+        "pending",
+        "verified",
+        "failed"
+      ]
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "partial",
+        "verified",
+        "failed"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "source": "/absolute/path/repository",
+  "destination": "/absolute/path/private-git-capture"
+}

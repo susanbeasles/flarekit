@@ -1,0 +1,5 @@
+{
+  "key": "objects/example.bin",
+  "destination": "/absolute/path/fresh-file",
+  "expectedSHA256": "replace-with-trusted-64-character-sha256"
+}

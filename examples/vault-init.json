@@ -1,0 +1,11 @@
+{
+  "vault": "/absolute/path/vault",
+  "identity": {
+    "provider": "environment",
+    "reference": "FK_PRIMARY_IDENTITY"
+  },
+  "recoveryIdentity": {
+    "provider": "environment",
+    "reference": "FK_RECOVERY_IDENTITY"
+  }
+}

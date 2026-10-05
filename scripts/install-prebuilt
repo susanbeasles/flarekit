@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+# Run from a reviewed prebuilt package; no Swift/Xcode/Homebrew compilation.
+cd "$(dirname "$0")"
+[ -f bin/fk ] || { echo 'Missing prebuilt fk binary' >&2; exit 2; }
+system=$(uname -s)
+architecture=$(uname -m)
+if [ "$system" = Darwin ]; then
+  if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || true)" = 1 ]; then architecture=arm64; fi
+  lipo -verify_arch "$architecture" bin/fk
+  codesign --verify --strict bin/fk
+  spctl --assess --type execute bin/fk
+else
+  echo 'This installer targets macOS prebuilt releases' >&2; exit 8
+fi
+destination=/usr/local/lib/flarekit/0.1.0
+[ ! -e "$destination" ] || { echo 'Installation exists; replacement must be explicit' >&2; exit 4; }
+mkdir -p "$destination"
+cp -R bin adapter "$destination/"
+if [ -d age ]; then cp -R age "$destination/"; fi
+mkdir -p /usr/local/bin
+[ ! -e /usr/local/bin/fk ] || { echo 'Existing /usr/local/bin/fk preserved' >&2; exit 4; }
+ln -s "$destination/bin/fk" /usr/local/bin/fk
+echo 'Installed fk under /usr/local. Configure explicit trusted adapter paths for Worker/age operations.'

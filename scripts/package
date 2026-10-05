@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+architecture=$(uname -m)
+if [ "$(uname -s)" = Darwin ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null || true)" = 1 ]; then architecture=arm64; fi
+swift build -c release --arch "$architecture"
+binary_dir=$(swift build -c release --arch "$architecture" --show-bin-path)
+mkdir -p dist
+package="dist/flarekit-0.1.0-dev-$(uname -s)-$architecture"
+[ ! -e "$package" ] || { echo 'Package exists' >&2; exit 4; }
+mkdir -p "$package/bin" "$package/docs" "$package/adapter"
+cp "$binary_dir/fk" "$package/bin/fk"
+cp README.md "$package/README.md"
+cp docs/*.md "$package/docs/"
+cp scripts/install-prebuilt "$package/install"
+cp adapter/package.json adapter/package-lock.json adapter/worker.mjs "$package/adapter/"
+if [ -d tools/age ]; then cp -R tools/age "$package/age"; fi
+echo "Prepared $package; Worker adapter still requires Node 22+ and npm ci."
+echo 'Developer ID signing, notarization and exact Node runtime packaging are required before official release.'

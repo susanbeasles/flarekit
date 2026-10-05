@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "archives": {
+      "accountID": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bucket": "replace-with-private-archive-bucket",
+      "group": {
+        "project": "personal",
+        "environment": "personal",
+        "purpose": "repository-archives",
+        "contentType": "encrypted-archive"
+      },
+      "managementCredential": {
+        "provider": "environment",
+        "reference": "FK_R2_MANAGEMENT_TOKEN"
+      },
+      "accessKeyID": {
+        "provider": "environment",
+        "reference": "FK_R2_ACCESS_KEY_ID"
+      },
+      "secretAccessKey": {
+        "provider": "environment",
+        "reference": "FK_R2_SECRET_ACCESS_KEY"
+      },
+      "allowedOperations": [
+        "storage.bucket.create",
+        "storage.bucket.inspect",
+        "storage.retention.inspect",
+        "storage.retention.apply",
+        "storage.object.upload",
+        "storage.object.download",
+        "storage.object.list",
+        "storage.object.inspect",
+        "storage.object.verify",
+        "storage.multipart.upload",
+        "storage.multipart.abort",
+        "archive.snapshot.publish",
+        "archive.snapshot.fetch"
+      ]
+    },
+    "deployment": {
+      "accountID": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "group": {
+        "project": "consumer-project",
+        "environment": "disposable",
+        "purpose": "controller-receipts",
+        "contentType": "json"
+      },
+      "workerCredential": {
+        "provider": "environment",
+        "reference": "FK_WORKER_TOKEN"
+      },
+      "allowedWorkerBucketNames": [
+        "replace-with-receipt-bucket"
+      ],
+      "allowedWorkerSecretReferences": [
+        "FK_WEBHOOK_SECRET"
+      ],
+      "allowedOperations": [
+        "worker.plan",
+        "worker.apply",
+        "worker.inspect",
+        "worker.promote",
+        "worker.secret.stage"
+      ]
+    }
+  },
+  "vaults": [
+    {
+      "id": "example-vault",
+      "encryptionFormat": "fk-age-v1",
+      "deduplicationScope": "vault",
+      "evictPrimaryAfterReplication": false,
+      "recoveryReferences": [
+        "OFFLINE_RECOVERY_IDENTITY"
+      ],
+      "destinations": [
+        {
+          "id": "r2",
+          "provider": "r2",
+          "role": "primary",
+          "credentialReference": "ADAPTER_R2",
+          "resource": "replace-with-destination",
+          "independentRestoreRequired": true
+        },
+        {
+          "id": "b2",
+          "provider": "b2",
+          "role": "replica",
+          "credentialReference": "ADAPTER_B2",
+          "resource": "replace-with-destination",
+          "independentRestoreRequired": true
+        },
+        {
+          "id": "google-drive",
+          "provider": "google-drive",
+          "role": "replica",
+          "credentialReference": "ADAPTER_GOOGLE_DRIVE",
+          "resource": "replace-with-destination",
+          "independentRestoreRequired": true
+        }
+      ],
+      "verification": {
+        "mode": "sampled",
+        "maximumReadBytesPerRun": 1073741824,
+        "maximumRequestsPerRun": 1000,
+        "intervalSeconds": 2592000,
+        "minimumSampleCount": 100
+      }
+    }
+  ]
+}

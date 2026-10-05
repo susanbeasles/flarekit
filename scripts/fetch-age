@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+system=$(uname -s)
+machine=$(uname -m)
+if [ "$system" = Darwin ]; then
+  # hw.optional.arm64 identifies Apple Silicon even when the shell runs in Rosetta.
+  if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || true)" = 1 ]; then machine=arm64; fi
+fi
+case "$system:$machine" in
+  Linux:x86_64) platform=linux-amd64; expected=bdc69c09cbdd6cf8b1f333d372a1f58247b3a33146406333e30c0f26e8f51377 ;;
+  Linux:aarch64|Linux:arm64) platform=linux-arm64; expected=c6878a324421b69e3e20b00ba17c04bc5c6dab0030cfe55bf8f68fa8d9e9093a ;;
+  Darwin:arm64) platform=darwin-arm64; expected=01120ea2cbf0463d4c6bd767f99f3271bbed1cdc8a9aa718a76ba1fe4f01998b ;;
+  Darwin:x86_64) platform=darwin-amd64; expected=2b233301ad21ab7b1eabd9ae1198a164005fa4928fcdd745d47c39f8593209d7 ;;
+  *) echo 'Unsupported architecture' >&2; exit 8 ;;
+esac
+temporary=$(mktemp -d)
+trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+curl --fail --location --silent --show-error "https://github.com/FiloSottile/age/releases/download/v1.3.1/age-v1.3.1-$platform.tar.gz" -o "$temporary/age.tar.gz"
+if [ "$system" = Darwin ]; then actual=$(shasum -a 256 "$temporary/age.tar.gz" | cut -d ' ' -f 1); else actual=$(sha256sum "$temporary/age.tar.gz" | cut -d ' ' -f 1); fi
+[ "$actual" = "$expected" ] || { echo 'age artifact digest mismatch' >&2; exit 5; }
+tar --no-same-owner -xzf "$temporary/age.tar.gz" -C "$temporary"
+mkdir -p tools
+[ ! -e tools/age ] || { echo 'Pinned age directory already exists; verify or remove it explicitly' >&2; exit 4; }
+mv "$temporary/age" tools/age
+echo "Installed integrity-verified age v1.3.1 ($platform) under tools/age"
