@@ -135,7 +135,7 @@ public final class AgeVault {
             let values=try file.resourceValues(forKeys:[.isRegularFileKey,.isDirectoryKey,.isSymbolicLinkKey,.fileSizeKey,.contentModificationDateKey])
             if values.isDirectory==true && values.isSymbolicLink != true { continue }
             try require(values.isRegularFile==true && values.isSymbolicLink != true,"Snapshot rejects symlinks/special files; use reviewed capture records instead")
-            let relative=String(file.path.dropFirst(source.path.count+1)); try safeRelative(relative)
+            let relative=try relativeEntryPath(file,under:source)
             try require(!relative.split(separator:"/").contains(".git"),"Raw Git administration files require archive.git.capture so configuration and hooks stay quarantined")
             let fh=try FileHandle(forReadingFrom:file); var chunks:[VaultBlob]=[]; var fileHasher=SHA256(); var fileSize:UInt64=0
             do {

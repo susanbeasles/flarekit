@@ -52,11 +52,11 @@ jobs:
           REQUEST_PATH: ${{ inputs.request-path }}
           CONFIG_PATH: ${{ inputs.config-path }}
           CAPABILITY: ${{ inputs.capability }}
-          FK_WORKER_TOKEN: ${{ secrets.FK_WORKER_TOKEN }}
-          FK_WEBHOOK_SECRET: ${{ secrets.FK_WEBHOOK_SECRET }}
-          FK_R2_ACCESS_KEY_ID: ${{ secrets.FK_R2_ACCESS_KEY_ID }}
-          FK_R2_SECRET_ACCESS_KEY: ${{ secrets.FK_R2_SECRET_ACCESS_KEY }}
-          FK_PRIMARY_IDENTITY: ${{ secrets.FK_PRIMARY_IDENTITY }}
+          FK_WORKER_TOKEN: ${{ inputs.capability == 'deployment' && secrets.FK_WORKER_TOKEN || '' }}
+          FK_WEBHOOK_SECRET: ${{ inputs.capability == 'deployment' && secrets.FK_WEBHOOK_SECRET || '' }}
+          FK_R2_ACCESS_KEY_ID: ${{ inputs.capability == 'archive' && secrets.FK_R2_ACCESS_KEY_ID || '' }}
+          FK_R2_SECRET_ACCESS_KEY: ${{ inputs.capability == 'archive' && secrets.FK_R2_SECRET_ACCESS_KEY || '' }}
+          FK_PRIMARY_IDENTITY: ${{ inputs.capability == 'archive' && secrets.FK_PRIMARY_IDENTITY || '' }}
         run: |
           set -euo pipefail
           python3 - <<'PY'

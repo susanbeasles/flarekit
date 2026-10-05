@@ -56,7 +56,7 @@ public final class GitCapture {
         func copyTree(_ root:URL,_ prefix:String,skip:(String)->Bool) throws {
             guard let iterator=FileManager.default.enumerator(at:root,includingPropertiesForKeys:[.isDirectoryKey,.isSymbolicLinkKey],options:[]) else { return }
             for case let file as URL in iterator {
-                let relative=String(file.path.dropFirst(root.path.count+1))
+                let relative=try relativeEntryPath(file,under:root)
                 if skip(relative) { iterator.skipDescendants(); continue }
                 let values=try file.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey])
                 if values.isDirectory==true && values.isSymbolicLink != true { continue }
@@ -117,6 +117,7 @@ public final class GitCapture {
         } catch { try? FileManager.default.removeItem(at:destination); throw error }
     }
     public func verify(capture:URL,expectedManifestDigest:String) throws -> JSON {
+        let capture=capture.standardizedFileURL.resolvingSymlinksInPath()
         let data=try Data(contentsOf:capture.appendingPathComponent("manifest.json"))
         try require(sha256(data)==expectedManifestDigest,"Manifest digest differs from trusted input")
         let manifest=try JSONDecoder().decode(GitCaptureManifest.self,from:data)

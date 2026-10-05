@@ -24,6 +24,10 @@ Archive decisions do not gate object operations or Worker deployment. The archiv
 
 ## Build and test
 
+For the repeatable local check, run `./scripts/check --bootstrap` once, then
+`./scripts/check`. On macOS, add `--keychain` to exercise temporary credential
+enrollment and cleanup. See [macOS qualification and Worker handoff](docs/MACOS-CHECK.md).
+
 Development requires Swift 6.2+, Node 22+ for the Worker adapter, and Git for Git capture. End-user prebuilt installation requires no compilation. No macOS prebuilt release has been produced in this Linux session.
 
 ```sh

@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Produce a reviewed-plan handoff; never execute Worker application."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import uuid
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--binary', default=os.environ.get('FK_BINARY', '.build/debug/fk'))
+    parser.add_argument('--parameters', required=True)
+    parser.add_argument('--config', required=True)
+    parser.add_argument('--profile', required=True)
+    parser.add_argument('--source', required=True, help='Directory containing prebuilt JS/MJS/WASM')
+    parser.add_argument('--output', required=True, help='New private directory for plan and apply request')
+    args = parser.parse_args()
+    binary = str(Path(args.binary).resolve())
+    config = str(Path(args.config).resolve())
+    parameters = json.loads(Path(args.parameters).read_text())
+    parameters['sourceDirectory'] = str(Path(args.source).resolve())
+    if parameters.get('mode') not in ['upload', 'deploy', 'dry-run']:
+        parser.error('Parameters must explicitly select upload, deploy, or dry-run')
+    parameters.pop('approvedPlan', None)
+    parameters.pop('approvedPlanDigest', None)
+    output = Path(args.output).resolve()
+    output.mkdir(mode=0o700, parents=False, exist_ok=False)
+    # The directory may retain an error marker after a failed plan; never reuse it
+    # automatically or replace an earlier review.
+    with tempfile.TemporaryDirectory(prefix='fk-plan-') as temporary:
+        request = {'schemaVersion': 1, 'requestID': str(uuid.uuid4()), 'operation': 'worker.plan', 'profile': args.profile, 'parameters': parameters}
+        path = Path(temporary) / 'request.json'
+        path.write_text(json.dumps(request))
+        path.chmod(0o600)
+        result = subprocess.run([binary, 'run', '--request', str(path), '--config', config], capture_output=True, text=True, timeout=240)
+        if result.returncode:
+            raise SystemExit('Worker planning failed; no application was attempted. Inspect configuration and remote state.')
+        receipt = json.loads(result.stdout)
+        if receipt.get('status') != 'succeeded' or receipt.get('operation') != 'worker.plan':
+            raise SystemExit('Unexpected planning response; no application was attempted.')
+        plan = receipt['output']['plan']
+        digest = receipt['output']['planDigest']
+        parameters.update(approvedPlan=plan, approvedPlanDigest=digest)
+        request.update(requestID=str(uuid.uuid4()), operation='worker.apply', parameters=parameters)
+        for name, value in [('plan.json', receipt), ('apply-request.json', request)]:
+            target = output / name
+            with target.open('x') as stream:
+                json.dump(value, stream, indent=2)
+                stream.write('\n')
+            target.chmod(0o600)
+    print(json.dumps({'status': 'prepared', 'plan': str(output / 'plan.json'), 'applyRequest': str(output / 'apply-request.json'), 'config': config, 'activates': plan.get('activates'), 'applicationAttempted': False}))
+
+if __name__ == '__main__':
+    main()

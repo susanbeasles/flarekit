@@ -39,7 +39,7 @@ public func workerArtifact(_ root: URL) throws -> JSON {
         try require(values.isSymbolicLink != true,"Worker source cannot contain symlinks")
         if values.isDirectory == true { continue }
         try require(values.isRegularFile == true && ["js","mjs","wasm"].contains(file.pathExtension),"Worker source must contain only prebuilt JS/MJS/WASM modules")
-        let relative = String(file.path.dropFirst(root.path.count+1)); try safeRelative(relative)
+        let relative = try relativeEntryPath(file,under:root)
         let h = try hashFile(file)
         entries.append(.object(["path":.string(relative),"sha256":.string(h.digest),"size":.string(String(h.size))]))
     }

@@ -18,6 +18,21 @@ Mock and dry-run checks establish local behavior, not Cloudflare service compati
 
 ## Remaining implementation and qualification sequence
 
+### Local qualification tooling increment
+
+`scripts/check` now provides the native build/test/Worker dry-run entry point;
+`scripts/prepare-worker` emits a private reviewed-plan handoff for caller code.
+Six Python handoff tests passed, including no application during planning,
+existing-review preservation, redaction of failed child output, private files,
+and rejection of invalid check options. Python compilation and shell syntax
+checks passed. The prior 23 Swift tests remain checkpoint evidence: the Swift
+toolchain was removed by workspace maintenance, so this increment has not
+rerun native Swift tests. A new opt-in macOS Keychain test requires the user's
+Mac. No live cloud operation or macOS validation was performed here.
+
+The reusable workflow now scopes secret values to its selected capability.
+GitHub-hosted workflow execution remains unverified.
+
 1. Run `scripts/live.py` only against an explicitly disposable Cloudflare account/environment. Verify private buckets, locks, object transfers, Worker activation/readback, HMAC receipts and cleanup. Settle retention durations before valuable archive use.
 2. Validate on macOS: Keychain enrollment/access, POSIX subprocess behavior, filesystem semantics and native builds. Produce pinned Node packaging and signed/notarized prebuilt artifacts. Exercise installation and protected CI workflow with those published artifacts.
 3. Implement B2 and Drive adapters, destination-specific credentials and verification journals. Replicate complete ciphertext containers and prove independent restore from each destination. Keep R2 primary objects; do not implement eviction.

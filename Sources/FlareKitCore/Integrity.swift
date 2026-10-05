@@ -20,3 +20,16 @@ public func safeRelative(_ path: String) throws {
     try require(!path.isEmpty && !path.hasPrefix("/") && !path.contains("\\") && !path.contains("\0"), "Unsafe relative path")
     try require(!path.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0 == "." || $0 == ".." || $0.isEmpty }), "Unsafe relative path")
 }
+
+// Canonicalize directory aliases without following the final entry: callers
+// must still inspect symlink entries rather than dereference their targets.
+public func relativeEntryPath(_ file: URL, under root: URL) throws -> String {
+    let base = root.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+    let parent = file.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath().pathComponents
+    let entry = parent + [file.lastPathComponent]
+    try require(entry.count > base.count && Array(entry.prefix(base.count)) == base,
+                "Entry is outside the selected root")
+    let relative = entry.dropFirst(base.count).joined(separator: "/")
+    try safeRelative(relative)
+    return relative
+}
