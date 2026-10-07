@@ -13,7 +13,7 @@ This is a tested development implementation, not a production-qualified release.
 | R2 private bucket and lock management | REST implementation; live validation pending |
 | Streaming R2 upload/download, list pages, inspect, SHA-256 verify | Mock transport tests; live validation pending |
 | Multipart upload/resume and explicit abort | Mock interruption/resume test; requires verified covering Indefinite lock |
-| Generic Worker plan/apply, version upload, activation, promote and secret staging | Pinned Wrangler fixture dry-run; live APIs pending |
+| Generic Worker plan/apply, version upload, activation, promote and secret staging | Pinned Wrangler dry-run; disposable live plan/apply, bindings and signed ingress qualified |
 | Git local capture and fresh restore | Objects including dangling data, refs and index tested; coverage limits below |
 | age-encrypted snapshots and vault-scoped dedup | Cross-snapshot ciphertext reuse and independent recovery tests |
 | R2 snapshot publication/fetch | Implemented; completion published last; live validation pending |
