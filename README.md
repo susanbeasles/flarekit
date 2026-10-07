@@ -13,7 +13,7 @@ This is a tested development implementation, not a production-qualified release.
 | R2 private bucket and lock management | REST implementation; live validation pending |
 | Streaming R2 upload/download, list pages, inspect, SHA-256 verify | Mock transport tests; live validation pending |
 | Multipart upload/resume and explicit abort | Mock interruption/resume test; requires verified covering Indefinite lock |
-| Generic Worker plan/apply, version upload, activation, promote and secret staging | Pinned Wrangler fixture dry-run; live APIs pending |
+| Generic Worker plan/apply, version upload, activation, promote and secret staging | Pinned Wrangler dry-run; disposable live plan/apply, bindings and signed ingress qualified |
 | Git local capture and fresh restore | Objects including dangling data, refs and index tested; coverage limits below |
 | age-encrypted snapshots and vault-scoped dedup | Cross-snapshot ciphertext reuse and independent recovery tests |
 | R2 snapshot publication/fetch | Implemented; completion published last; live validation pending |
@@ -42,7 +42,7 @@ swift test
 python3 scripts/smoke.py
 ```
 
-Wrangler is exactly `4.120.0`; npm lockfile includes package integrity. age is exactly `1.3.1`; the bootstrap script verifies the publisher-reported release digest. Swift dependencies are pinned in `Package.resolved`. Node version is a declared prerequisite, not automatically fetched. The adapter rejects Node below 22; exact Node packaging remains a release task.
+Wrangler is exactly `4.148.0`; npm lockfile includes package integrity. age is exactly `1.3.1`; the bootstrap script verifies the publisher-reported release digest. Swift dependencies are pinned in `Package.resolved`. Node version is a declared prerequisite, not automatically fetched. The adapter rejects Node below 22; exact Node packaging remains a release task.
 
 Configure trusted absolute tool paths:
 
@@ -54,6 +54,18 @@ export FK_AGE_KEYGEN="$PWD/tools/age/age-keygen"
 ```
 
 `examples/config.json` contains placeholder destinations and credential references, never token values. Replace the account/resource placeholders and select an explicit profile. Obtain separate S3 object credentials, bucket-management credentials, and Worker deployment credentials; do not put them in argv. Local Keychain references use provider `keychain`; CI uses `environment` and protected GitHub environment secrets.
+
+Private Worker deployments support `services` bindings, including named `entrypoint` values, and external Durable Object `script_name` bindings. Profiles must explicitly grant target names in `allowedWorkerServiceNames` and `allowedWorkerDurableObjectScriptNames`; absent lists grant no access to these targets. Cross-environment bindings are unsupported. Deployment readback checks the service/entrypoint and Durable Object class/script as well as namespace presence, and inspection retains these nonsecret fields. The reviewed plan still binds the complete configuration and source artifact. These contracts support Trustless's private three-Worker layout; they do not establish live deployment or hardware admission qualification.
+
+On October 7, the native CLI deployed two disposable personal Cloudflare fixtures, verified their returned versions and binding settings, and executed a named service RPC plus an external SQLite Durable Object call. Both returned the exact nonce; an invalid ingress credential was rejected with 403. Both fixture Workers were deleted and read back as absent. This qualifies the private binding deployment path, not Trustless's physical admission or native S3 credentials.
+
+To repeat after building `.build/debug/fk`, use Python 3.12+ and the current macOS Wrangler OAuth session:
+
+```sh
+python3 scripts/qualify-private-bindings.py --account YOUR_ACCOUNT_ID --receipt /private/tmp/unique-bindings.receipt.json
+```
+
+The script creates randomly named `fk-bindings-*` fixtures and removes only its own attempted fixture resources. It reads the existing OAuth token internally, keeps deployment credentials out of argv and receipts, and preserves the login session. The receipt path must be new. A failed mutation or cleanup is reported explicitly; inspect the receipt before retrying.
 
 ```sh
 .build/release/fk --help
