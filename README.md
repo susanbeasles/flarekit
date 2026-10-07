@@ -55,6 +55,8 @@ export FK_AGE_KEYGEN="$PWD/tools/age/age-keygen"
 
 `examples/config.json` contains placeholder destinations and credential references, never token values. Replace the account/resource placeholders and select an explicit profile. Obtain separate S3 object credentials, bucket-management credentials, and Worker deployment credentials; do not put them in argv. Local Keychain references use provider `keychain`; CI uses `environment` and protected GitHub environment secrets.
 
+Private Worker deployments support `services` bindings, including named `entrypoint` values, and external Durable Object `script_name` bindings. Profiles must explicitly grant target names in `allowedWorkerServiceNames` and `allowedWorkerDurableObjectScriptNames`; absent lists grant no access to these targets. Cross-environment bindings are unsupported. Deployment readback checks the service/entrypoint and Durable Object class/script as well as namespace presence, and inspection retains these nonsecret fields. The reviewed plan still binds the complete configuration and source artifact. These contracts support Trustless's private three-Worker layout; they do not establish live deployment or hardware admission qualification.
+
 ```sh
 .build/release/fk --help
 .build/release/fk configuration validate --parameters examples/empty.json --config examples/config.json --json

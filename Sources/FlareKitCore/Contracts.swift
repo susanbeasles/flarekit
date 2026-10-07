@@ -102,6 +102,8 @@ public struct Profile: Codable {
     public let allowedOperations: [Operation]
     public let allowedWorkerBucketNames: [String]?
     public let allowedWorkerSecretReferences: [String]?
+    public let allowedWorkerServiceNames: [String]?
+    public let allowedWorkerDurableObjectScriptNames: [String]?
 }
 public struct Configuration: Codable {
     public let schemaVersion: Int
