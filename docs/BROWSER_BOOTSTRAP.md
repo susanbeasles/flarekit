@@ -8,7 +8,7 @@ python3 scripts/bootstrap-live.py
 
 The command opens Cloudflare's browser OAuth authorization page. Approve access and select the account if multiple accounts are available. No token creation, copying, secret entry, or credential upload is required. R2 must already be enabled on the selected account; the bootstrap does not activate paid products or register a workers.dev account subdomain.
 
-The pinned Wrangler 4.120.0 login uses PKCE and requests `account:read`, `user:read`, `workers:write`, and `workers_scripts:write`; Wrangler also requests `offline_access`. These scopes are broader than the generated fixtures. Browser consent is the authorization boundary; the executable restricts its mutations and cleanup to newly generated fixture names. This is not server-enforced bucket-only OAuth authorization.
+The pinned Wrangler 4.148.0 login uses PKCE and requests `account:read`, `user:read`, `workers:write`, and `workers_scripts:write`; Wrangler also requests `offline_access`. These scopes are broader than the generated fixtures. Browser consent is the authorization boundary; the executable restricts its mutations and cleanup to newly generated fixture names. This is not server-enforced bucket-only OAuth authorization.
 
 The bootstrap uses a private temporary session directory with a restrictive umask and ignores existing Cloudflare tokens, auth endpoint overrides, Wrangler profiles, and Node injection settings. Wrangler's temporary token file is local and mode 0600; it is not an archive artifact. It does not modify the user's existing Wrangler session or Keychain. Deployment authorization passes through the existing native environment-credential interface into the isolated adapter. The deployed Worker receives only a generated webhook secret and its receipt-bucket binding. It receives no provisioning token or archive key.
 
@@ -35,6 +35,8 @@ Wrangler's pinned OAuth scope list has no token-management scope. R2 S3 access r
 ## Observed live qualification
 
 On October 7, 2026, the native bootstrap infrastructure path passed against disposable personal Cloudflare resources using the existing Wrangler OAuth session: bucket creation and retention readback, complete object upload/download, Worker plan/apply, HMAC ingress through SQLite DO and R2, duplicate delivery, invalid-signature rejection, and receipt content comparison. The fixture Worker and bucket were removed. Evidence: `/private/tmp/flarekit-bootstrap-debug.receipt.json`.
+
+The bootstrap probes invalid-signature rejection before submitting a signed receipt. A new DO route can still return `Worker not found` after the public route is ready. The fixture exposes only that exact pre-handler routing failure as HTTP 503 with a readiness marker; the bootstrap retries that marker for at most 12 attempts. Storage errors and other ambiguous responses fail without automatic retry.
 
 The first live attempt exposed R2 error 10069 on duplicate writes to a locked receipt. The Worker now reads and compares the entire stored content before returning `existing`; a concurrent creation is accepted only after that same comparison. Missing, corrupt, and unavailable storage remain failures. This qualification preserved the existing OAuth session; separate earlier isolated sessions received HTTP 200 for both revocation requests. No native S3, archive-cloud flow, or independent DO namespace cleanup is claimed.
 
@@ -69,3 +71,5 @@ python3 -m unittest discover -s scripts/tests -p test_bootstrap.py -v
 ```
 
 These tests mock Cloudflare, Wrangler, and the native binary. They check account authorization, credential/environment isolation, redirect rejection, full content comparisons, cleanup on failure, fixture-name containment, and revocation handling. They do not claim live cloud qualification.
+
+The deployment adapter is pinned to Wrangler 4.148.0. Its Miniflare dependency pins vulnerable Sharp 0.35.4, so the lockfile applies a scoped Sharp 0.35.5 override for [GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w). The updated adapter audit reports zero findings.

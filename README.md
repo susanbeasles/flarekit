@@ -42,7 +42,7 @@ swift test
 python3 scripts/smoke.py
 ```
 
-Wrangler is exactly `4.120.0`; npm lockfile includes package integrity. age is exactly `1.3.1`; the bootstrap script verifies the publisher-reported release digest. Swift dependencies are pinned in `Package.resolved`. Node version is a declared prerequisite, not automatically fetched. The adapter rejects Node below 22; exact Node packaging remains a release task.
+Wrangler is exactly `4.148.0`; npm lockfile includes package integrity. age is exactly `1.3.1`; the bootstrap script verifies the publisher-reported release digest. Swift dependencies are pinned in `Package.resolved`. Node version is a declared prerequisite, not automatically fetched. The adapter rejects Node below 22; exact Node packaging remains a release task.
 
 Configure trusted absolute tool paths:
 

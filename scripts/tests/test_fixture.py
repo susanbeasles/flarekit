@@ -11,9 +11,17 @@ class ReceiptFixtureTests(unittest.TestCase):
         self.assertIsNotNone(node, 'Node is required for the Worker fixture checks')
         code = r'''
 import assert from 'node:assert/strict';
-import {FixtureCoordinator} from './fixtures/worker/index.mjs';
+import worker,{FixtureCoordinator} from './fixtures/worker/index.mjs';
 const bytes=new TextEncoder().encode('receipt');
 const request=()=>new Request('https://internal/receipt',{method:'POST',body:bytes});
+const key=await crypto.subtle.importKey('raw',new TextEncoder().encode('fixture-key'),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+const sig=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+const signed=()=>new Request('https://fixture.example/fixture',{method:'POST',body:bytes,headers:{'x-fixture-signature':sig}});
+const env=message=>({WEBHOOK_SECRET:'fixture-key',COORDINATOR:{idFromName:x=>x,get:()=>({fetch:async()=>{throw Error(message);}})}});
+const waiting=await worker.fetch(signed(),env('Worker not found.'));
+assert.equal(waiting.status,503);
+assert.equal(waiting.headers.get('x-fixture-readiness'),'durable-object-route');
+await assert.rejects(worker.fetch(signed(),env('unexpected storage error')),/unexpected storage error/);
 const object=data=>({size:data.length,arrayBuffer:async()=>data.slice().buffer});
 let stored=null, puts=0;
 const storage={put:async()=>{}};

@@ -10,7 +10,16 @@ export default {
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.WEBHOOK_SECRET), {name:'HMAC',hash:'SHA-256'},false,['verify']);
     const signature = Uint8Array.from(header.match(/../g),x=>parseInt(x,16));
     if (!await crypto.subtle.verify('HMAC',key,signature,body)) return new Response('Unauthorized',{status:401});
-    return env.COORDINATOR.get(env.COORDINATOR.idFromName('fixture')).fetch('https://internal/receipt',{method:'POST',body});
+    try {
+      return await env.COORDINATOR.get(env.COORDINATOR.idFromName('fixture')).fetch('https://internal/receipt',{method:'POST',body});
+    } catch(error) {
+      // Newly deployed DO routes can lag behind the public Worker route.
+      // Expose only this pre-handler failure as a bounded readiness condition.
+      if (error.message !== 'Worker not found.') throw error;
+      return new Response('Durable Object route not ready', {
+        status:503, headers:{'x-fixture-readiness':'durable-object-route'}
+      });
+    }
   }
 };
 export class FixtureCoordinator {

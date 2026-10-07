@@ -18,7 +18,7 @@ import urllib.parse
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = '4.120.0'
+PIN = '4.148.0'
 SCOPES = ['account:read', 'user:read', 'workers:write', 'workers_scripts:write']
 
 class Failure(Exception):
@@ -156,6 +156,20 @@ def wait_for_ingress(ingress, receipt, save, pause=time.sleep):
     raise Failure('Ingress route unavailable after bounded deployment propagation check')
 
 
+
+def first_receipt(ingress, signature, receipt, save, pause=time.sleep):
+    # Retry only the explicit pre-handler DO routing failure. All storage and
+    # ambiguous delivery errors remain failures and are not automatically retried.
+    for attempt in range(1, 13):
+        receipt['durableObjectReadinessAttempts'] = attempt; save()
+        try: return ingress(signature)
+        except urllib.error.HTTPError as error:
+            if error.code != 503 or error.headers.get('x-fixture-readiness') != 'durable-object-route':
+                raise
+        if attempt < 12: pause(2)
+    raise Failure('Durable Object route unavailable after bounded deployment propagation check')
+
+
 def qualify(session, account, binary, receipt, save):
     bucket = worker = 'fk-fixture-'+uuid.uuid4().hex[:16]
     receipt.update(accountID=account, bucket=bucket, worker=worker,
@@ -241,7 +255,7 @@ try {const r=await fetch(input.endpoint,{method:'POST',redirect:'error',
 headers:{'x-fixture-signature':input.signature},body:input.body,
 signal:AbortSignal.timeout(60000)});
 const text=await r.text();if(text.length>65536)throw Error('limit');
-process.stdout.write(JSON.stringify({status:r.status,body:r.status===200?JSON.parse(text):null}));
+process.stdout.write(JSON.stringify({status:r.status,readiness:r.headers.get('x-fixture-readiness'),body:r.status===200?JSON.parse(text):null}));
 }catch{process.exitCode=1;}"""
             result=subprocess.run([session.node,'--input-type=module','-e',code],
                 input=json.dumps({'endpoint':endpoint,'signature':signature,'body':body.decode('ascii')}),
@@ -249,12 +263,13 @@ process.stdout.write(JSON.stringify({status:r.status,body:r.status===200?JSON.pa
             if result.returncode: raise Failure('Live ingress transport failed; response withheld')
             response=json.loads(result.stdout)
             if response['status']!=200:
-                raise urllib.error.HTTPError(endpoint,response['status'],'Ingress rejected',{},None)
+                raise urllib.error.HTTPError(endpoint,response['status'],'Ingress rejected',{'x-fixture-readiness':response.get('readiness')},None)
             return response['body']
         receipt['phase']='live-ingress'; save()
         wait_for_ingress(ingress,receipt,save)
-        first, repeat = ingress(signature), ingress(signature)
-        if first['digest'] != digest or repeat['state'] != 'existing' or repeat['digest'] != digest or first['promotion'] != 'disabled':
+        first = first_receipt(ingress,signature,receipt,save)
+        repeat = ingress(signature)
+        if first['state'] != 'created' or first['digest'] != digest or repeat['state'] != 'existing' or repeat['digest'] != digest or first['promotion'] != 'disabled':
             raise Failure('Ingress verification failed')
         try: ingress('0'*64)
         except urllib.error.HTTPError as error:

@@ -34,6 +34,32 @@ class BootstrapTests(unittest.TestCase):
         with self.assertRaises(bootstrap.Failure):
             bootstrap.wait_for_ingress(lambda _: {},{},lambda:None,pause=lambda _:self.fail('must not retry'))
 
+    def testDurableObjectReadinessRetriesOnlyExplicitPreHandlerFailure(self):
+        import urllib.error
+        calls=[]; pauses=[]; receipt={}
+        def ingress(signature):
+            calls.append(signature)
+            if len(calls)<3:
+                raise urllib.error.HTTPError('https://fixture.example',503,'',
+                    {'x-fixture-readiness':'durable-object-route'},None)
+            return {'state':'created'}
+        self.assertEqual(bootstrap.first_receipt(ingress,'signed',receipt,lambda:None,pause=pauses.append),{'state':'created'})
+        self.assertEqual(calls,['signed']*3)
+        self.assertEqual(pauses,[2,2])
+        for code in (500,503):
+            def failure(signature): raise urllib.error.HTTPError('https://fixture.example',code,'',{},None)
+            with self.assertRaises(urllib.error.HTTPError):
+                bootstrap.first_receipt(failure,'signed',{},lambda:None,pause=lambda _:self.fail('must not retry'))
+
+    def testDurableObjectReadinessHasBoundedFailure(self):
+        import urllib.error
+        def failure(signature): raise urllib.error.HTTPError('https://fixture.example',503,'',
+            {'x-fixture-readiness':'durable-object-route'},None)
+        receipt={}
+        with self.assertRaises(bootstrap.Failure):
+            bootstrap.first_receipt(failure,'signed',receipt,lambda:None,pause=lambda _:None)
+        self.assertEqual(receipt['durableObjectReadinessAttempts'],12)
+
     def testInheritedCredentialsAndEndpointOverridesAreExcluded(self):
         with patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN':'secret','NODE_OPTIONS':'--inspect',
              'WRANGLER_CLIENT_ID':'substituted','WRANGLER_AUTH_DOMAIN':'evil.example','FK_WORKER_TOKEN':'secret'}):
