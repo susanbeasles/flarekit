@@ -57,6 +57,16 @@ export FK_AGE_KEYGEN="$PWD/tools/age/age-keygen"
 
 Private Worker deployments support `services` bindings, including named `entrypoint` values, and external Durable Object `script_name` bindings. Profiles must explicitly grant target names in `allowedWorkerServiceNames` and `allowedWorkerDurableObjectScriptNames`; absent lists grant no access to these targets. Cross-environment bindings are unsupported. Deployment readback checks the service/entrypoint and Durable Object class/script as well as namespace presence, and inspection retains these nonsecret fields. The reviewed plan still binds the complete configuration and source artifact. These contracts support Trustless's private three-Worker layout; they do not establish live deployment or hardware admission qualification.
 
+On October 7, the native CLI deployed two disposable personal Cloudflare fixtures, verified their returned versions and binding settings, and executed a named service RPC plus an external SQLite Durable Object call. Both returned the exact nonce; an invalid ingress credential was rejected with 403. Both fixture Workers were deleted and read back as absent. This qualifies the private binding deployment path, not Trustless's physical admission or native S3 credentials.
+
+To repeat after building `.build/debug/fk`, use Python 3.12+ and the current macOS Wrangler OAuth session:
+
+```sh
+python3 scripts/qualify-private-bindings.py --account YOUR_ACCOUNT_ID --receipt /private/tmp/unique-bindings.receipt.json
+```
+
+The script creates randomly named `fk-bindings-*` fixtures and removes only its own attempted fixture resources. It reads the existing OAuth token internally, keeps deployment credentials out of argv and receipts, and preserves the login session. The receipt path must be new. A failed mutation or cleanup is reported explicitly; inspect the receipt before retrying.
+
 ```sh
 .build/release/fk --help
 .build/release/fk configuration validate --parameters examples/empty.json --config examples/config.json --json
