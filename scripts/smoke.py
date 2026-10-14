@@ -36,5 +36,5 @@ with tempfile.TemporaryDirectory(prefix='fk-smoke-') as temp:
     params['approvedPlan'] = plan['plan']; params['approvedPlanDigest'] = plan['planDigest']
     result = execute('worker.apply', params)
     assert result['verification'] == 'local-dry-run'
-    assert result['adapter']['wranglerVersion'] == '4.120.0'
+    assert result['adapter']['wranglerVersion'] == '4.148.0'
     print('PASS: native plan/apply → pinned Wrangler dry-run, SQLite DO + R2 fixture, structured result and token redaction')

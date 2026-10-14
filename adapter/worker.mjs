@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
-const PIN = '4.120.0';
+const PIN = '4.148.0';
 let workspace;
 try {
   if (process.argv.length !== 3) throw new Error('control-file');
