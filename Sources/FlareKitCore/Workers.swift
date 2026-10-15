@@ -20,7 +20,7 @@ public func processJSON(executable: URL, arguments: [String], input: Data, envir
 }
 public func validateWorkerConfig(_ config: JSON, account: String) throws {
     guard let fields = config.object else { throw FKError("validation", "Worker configuration must be an object") }
-    let allowed: Set<String> = ["name","main","account_id","compatibility_date","compatibility_flags","workers_dev","routes","durable_objects","migrations","r2_buckets","vars","rules","find_additional_modules"]
+    let allowed: Set<String> = ["name","main","account_id","compatibility_date","compatibility_flags","workers_dev","routes","durable_objects","migrations","r2_buckets","services","vars","rules","find_additional_modules"]
     try require(Set(fields.keys).isSubset(of:allowed), "Worker configuration contains unsupported fields; build hooks and implicit tool configuration are forbidden")
     guard let name = config["name"].string else { throw FKError("validation", "Worker name required") }
     try require(name.range(of:"^[a-z0-9][a-z0-9-]{0,62}$",options:.regularExpression) != nil, "Invalid Worker name")
@@ -30,6 +30,38 @@ public func validateWorkerConfig(_ config: JSON, account: String) throws {
     try require(date.range(of:"^20[0-9]{2}-[0-9]{2}-[0-9]{2}$", options:.regularExpression) != nil,"Invalid compatibility date")
     if let main = config["main"].string { try safeRelative(main) }
     for b in config["r2_buckets"].array ?? [] { guard let name = b["bucket_name"].string else { throw FKError("validation","R2 bucket name required") }; try validateBucket(name) }
+    if config["services"] != .null { try require(config["services"].array != nil,"Services must be an array") }
+    for binding in config["services"].array ?? [] {
+        guard let fields=binding.object else { throw FKError("validation","Service binding must be an object") }
+        try require(Set(fields.keys).isSubset(of:["binding","service","entrypoint"]),"Unsupported service binding fields")
+        try require(binding["binding"].string?.range(of:"^[A-Za-z_][A-Za-z0-9_]*$",options:.regularExpression) != nil,"Invalid service binding name")
+        try require(binding["service"].string?.range(of:"^[a-z0-9][a-z0-9-]{0,62}$",options:.regularExpression) != nil,"Invalid service Worker name")
+        if binding["entrypoint"] != .null { try require(binding["entrypoint"].string?.range(of:"^[A-Za-z_][A-Za-z0-9_]*$",options:.regularExpression) != nil,"Invalid service entrypoint") }
+    }
+    for binding in config["durable_objects"]["bindings"].array ?? [] {
+        if binding["script_name"] != .null {
+            try require(binding["script_name"].string?.range(of:"^[a-z0-9][a-z0-9-]{0,62}$",options:.regularExpression) != nil,"Invalid external Durable Object script")
+            try require(binding["environment"] == .null,"External Durable Object environments are unsupported")
+        }
+    }
+}
+public func validateWorkerPrivateBindingAuthority(_ config: JSON, profile: Profile) throws {
+    for binding in config["services"].array ?? [] {
+        try require((profile.allowedWorkerServiceNames ?? []).contains(binding["service"].string ?? ""),"Worker service binding is not allowed by the profile")
+    }
+    for binding in config["durable_objects"]["bindings"].array ?? [] {
+        if binding["script_name"] != .null {
+            try require((profile.allowedWorkerDurableObjectScriptNames ?? []).contains(binding["script_name"].string ?? ""),"External Durable Object script is not allowed by the profile")
+        }
+    }
+}
+public func verifyWorkerPrivateBindings(_ config: JSON, bindings: [JSON]) throws {
+    for binding in config["durable_objects"]["bindings"].array ?? [] {
+        try require(bindings.contains{$0["name"]==binding["name"] && $0["type"].string=="durable_object_namespace" && $0["namespace_id"].string != nil && $0["class_name"]==binding["class_name"] && (binding["script_name"] == .null || $0["script_name"]==binding["script_name"])},"Durable Object binding readback differs")
+    }
+    for binding in config["services"].array ?? [] {
+        try require(bindings.contains{$0["name"]==binding["binding"] && $0["type"].string=="service" && $0["service"]==binding["service"] && $0["entrypoint"]==binding["entrypoint"]},"Service binding readback differs")
+    }
 }
 public func workerArtifact(_ root: URL) throws -> JSON {
     guard let iterator = FileManager.default.enumerator(at:root,includingPropertiesForKeys:[.isRegularFileKey,.isDirectoryKey,.isSymbolicLinkKey],options:[]) else { throw FKError("validation","Source directory unavailable") }
@@ -61,6 +93,7 @@ public final class Workers {
             try require(allowedBuckets.contains(binding["bucket_name"].string ?? ""),"Worker R2 binding is not allowed by the profile")
         }
         let allowedSecrets=Set(profile.allowedWorkerSecretReferences ?? [])
+        try validateWorkerPrivateBindingAuthority(input.configuration,profile:profile)
         for ref in (input.secretReferences ?? [:]).values { try ref.validate(); try require(allowedSecrets.contains(ref.reference),"Worker secret reference is not allowed by the profile") }
     }
     public func inspect(_ name:String) async throws -> JSON {
@@ -68,7 +101,7 @@ public final class Workers {
         let deployments=try await current(name)
         let settings=try await cloud.call("GET",path:["workers","scripts",name,"settings"])
         let bindings = (settings["bindings"].array ?? []).map { b in
-            JSON.object(Dictionary(uniqueKeysWithValues:["name","type","namespace_id","bucket_name","class_name"].compactMap { k in b[k] == .null ? nil : (k,b[k]) }))
+            JSON.object(Dictionary(uniqueKeysWithValues:["name","type","namespace_id","bucket_name","class_name","script_name","service","entrypoint","environment"].compactMap { k in b[k] == .null ? nil : (k,b[k]) }))
         }
         return .object(["deployments":deployments,"deploymentDigest":.string(sha256(try deployments.encoded())),"bindings":.array(bindings)])
     }
@@ -125,9 +158,7 @@ public final class Workers {
             for binding in input.configuration["r2_buckets"].array ?? [] {
                 try require(bindings.contains{$0["name"]==binding["binding"] && $0["bucket_name"]==binding["bucket_name"]},"R2 binding readback differs")
             }
-            for binding in input.configuration["durable_objects"]["bindings"].array ?? [] {
-                try require(bindings.contains{$0["name"]==binding["name"] && $0["namespace_id"].string != nil},"Durable Object namespace readback missing")
-            }
+            try verifyWorkerPrivateBindings(input.configuration,bindings:bindings)
             for name in (input.secretReferences ?? [:]).keys { try require(bindings.contains{$0["name"].string==name && $0["type"].string=="secret_text"},"Secret binding readback missing") }
         }
         var endpoints:[JSON]=[]

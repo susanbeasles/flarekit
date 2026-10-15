@@ -84,6 +84,7 @@ public final class Engine {
                 }
             case .workerPlan,.workerApply:
                 let input=try params.decode(WorkerInput.self); try validateWorkerConfig(input.configuration,account:profile.accountID)
+                try validateWorkerPrivateBindingAuthority(input.configuration,profile:profile)
                 guard let root=input.sourceDirectory else { throw FKError("validation","sourceDirectory required") }
                 let artifact=try workerArtifact(URL(fileURLWithPath:root).standardizedFileURL)
                 try require(artifact.array!.contains{$0["path"].string==input.configuration["main"].string},"Main module not present in reviewed source directory")
