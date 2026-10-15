@@ -18,7 +18,7 @@ import urllib.parse
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = '4.148.0'
+PIN = '4.151.0'
 SCOPES = ['account:read', 'user:read', 'workers:write', 'workers_scripts:write']
 
 class Failure(Exception):
